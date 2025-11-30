@@ -3,7 +3,7 @@ import { getAuth, setPersistence, browserLocalPersistence, createUserWithEmailAn
 import { getFirestore, doc, setDoc, getDoc, collection, query, orderBy, limit, getDocs } from "firebase/firestore";
 
 const app = initializeApp({
-  apiKey: "AIzaSyBk93Hw9GsC2whrpiNwQTeBJ16aRBAU99k",
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: "heart-game-5d25a.firebaseapp.com",
   projectId: "heart-game-5d25a",
   storageBucket: "heart-game-5d25a.firebasestorage.app",

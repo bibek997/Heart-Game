@@ -1,12 +1,12 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import { fetchPuzzle, validateGuess } from "./api";
 import { useAuth } from "./AuthContext";
-import { updateUserScore, logout as fbLogout } from "./firebase";
+import { updateUserScore } from "./firebase";
+import { logout as fbLogout } from "./firebase";
 import { useNavigate } from "react-router-dom";
 
 const TOTAL = 10;
-const TIME = 15;
+const TIME  = 15;
 
 export default function Game() {
   const { user, data } = useAuth();
@@ -16,16 +16,38 @@ export default function Game() {
   const [round, setRound] = useState(1);
   const [score, setScore] = useState(0);
   const [streak, setStreak] = useState(0);
-  const [correctCount, setCorrectCount] = useState(0);
-
   const [img, setImg] = useState("");
   const [tok, setTok] = useState("");
-  const [guess, setGuess] = useState("");   // ←  cleared on Play Again
+  const [guess, setGuess] = useState("");
 
-  /* ---------- local timer ---------- */
+  /* ---------- timer ---------- */
   const [left, setLeft] = useState(TIME);
   const timerId = useRef(null);
 
+  /* ---------- flags / ui ---------- */
+  const [imgLoading, setImgLoading] = useState(true);
+  const [gameOver, setGameOver] = useState(false);
+  const [summary, setSummary] = useState(null);
+  const [top10, setTop10] = useState([]);
+
+  /* ---------- lifecycle ---------- */
+  useEffect(() => {
+    loadPuzzle();
+    import("./firebase").then(m => m.fetchTop10().then(setTop10));
+    return () => clearInterval(timerId.current);
+  }, []);
+
+  /* ➜ FORCE submit on 10th-round timeout ----------------------------- */
+  useEffect(() => {
+    if (round === TOTAL && left === 0 && !gameOver) {
+      (async () => {
+        clearInterval(timerId.current);
+        await submit(true);          // true = forced submit (timeout)
+      })();
+    }
+  }, [left, round, gameOver]);
+
+  /* ---------- timer helpers ---------- */
   const startTimer = () => {
     clearInterval(timerId.current);
     setLeft(TIME);
@@ -33,60 +55,47 @@ export default function Game() {
       setLeft(l => {
         if (l <= 1) {
           clearInterval(timerId.current);
-          handleTimeout();
-          return 0;
+          return 0;                  // the above useEffect will pick up left===0
         }
         return l - 1;
       });
     }, 1000);
   };
 
-  const stopTimer = () => clearInterval(timerId.current);
-
-  /* ---------- leaderboard ---------- */
-  const [top10, setTop10] = useState([]);
-
-  /* ---------- flags ---------- */
-  const [imgLoading, setImgLoading] = useState(true);
-  const [gameOver, setGameOver] = useState(false);
-
-  useEffect(() => {
-    loadPuzzle();
-    import("./firebase").then(m => m.fetchTop10().then(setTop10));
-    return () => stopTimer(); // cleanup on unmount
-  }, []);
-
-  /* ---------- helpers ---------- */
+  /* ---------- puzzle ---------- */
   const loadPuzzle = async () => {
-    if (gameOver) return;
+    if (round > TOTAL) return;
     setImgLoading(true);
     try {
       const p = await fetchPuzzle();
       setImg(p.image);
       setTok(p.gameToken);
-      setGuess("");          // ←  clear input
+      setGuess("");
       startTimer();
     } catch (e) {
       console.error("load puzzle failed", e);
     }
   };
 
-  const submit = async () => {
-    if (gameOver || !guess) return;
-    const res = await validateGuess(tok, Number(guess));
+  /* ---------- submit ---------- */
+  const submit = async (isForced = false) => {
+    if (gameOver) return;
+    const res = await validateGuess(tok, Number(guess) || 0); // 0 if empty
     const ok = res.correct;
-    const earned = ok ? 10 + Math.max(0, left - 5) : 0;
+
+    // scoring: 20 base + 5 per streak
+    const earned = ok ? 20 + streak * 5 : 0;
     const nowScore = score + earned;
     setScore(nowScore);
+
     if (ok) {
       setStreak(s => s + 1);
-      setCorrectCount(c => c + 1);
     } else {
       setStreak(0);
     }
 
+    // always end after round 10
     if (round === TOTAL) {
-      stopTimer();
       showSummary(nowScore, ok ? streak + 1 : 0);
       return;
     }
@@ -94,16 +103,7 @@ export default function Game() {
     loadPuzzle();
   };
 
-  function handleTimeout() {
-    if (gameOver) return;
-    if (round < TOTAL) {
-      setRound(r => r + 1);
-      loadPuzzle();
-      return;
-    }
-    showSummary(score, 0);
-  }
-
+  /* ---------- summary ---------- */
   function showSummary(finalScore, finalStreak) {
     setGameOver(true);
     const newBest = Math.max((data?.bestScore || 0), finalScore);
@@ -117,25 +117,22 @@ export default function Game() {
     );
   }
 
-  const handleLogout = async () => {
-    await fbLogout();
-    nav("/login");
-  };
-
   const newGame = () => {
-    // ➜  FULL reset including guess
     setRound(1);
     setScore(0);
     setStreak(0);
-    setCorrectCount(0);
-    setGuess("");          // ←  fix: empty the input
+    setGuess("");
     setGameOver(false);
     setSummary(null);
     loadPuzzle();
   };
 
+  const handleLogout = async () => {
+    await fbLogout();
+    nav("/login");
+  };
+
   /* ---------- SUMMARY MODAL ---------- */
-  const [summary, setSummary] = useState(null);
   if (gameOver)
     return (
       <>
@@ -177,20 +174,13 @@ export default function Game() {
             <div className="bg-rose-100 rounded-xl p-3"><div className="text-lg font-bold text-rose-700">{left}s</div><div className="text-xs text-rose-600">Time</div></div>
           </div>
 
-          {/* IMAGE + LOADER */}
           <div className="relative mb-4 rounded-xl overflow-hidden shadow-md">
             {imgLoading && (
               <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/50">
                 <div className="w-12 h-12 rounded-full border-4 border-pink-200 border-t-pink-600 animate-spin" />
               </div>
             )}
-            <img
-              src={img || undefined}
-              alt="puzzle"
-              className="w-full object-cover"
-              onLoad={() => setImgLoading(false)}
-              onError={() => setImgLoading(false)}
-            />
+            <img src={img || undefined} alt="puzzle" className="w-full object-cover" onLoad={() => setImgLoading(false)} onError={() => setImgLoading(false)} />
           </div>
 
           <form onSubmit={e => { e.preventDefault(); submit(); }} className="flex gap-3 items-center">
