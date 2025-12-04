@@ -58,7 +58,7 @@ npm install
 
 ```bash
 PORT=4000
-JWT_SECRET=change_this_to_a_long_random_secret
+JWT_SECRET=********
 API_BASE=http://marcconrad.com/uob/heart/api.php
 TOKEN_EXPIRES_SECONDS=300
 ```
