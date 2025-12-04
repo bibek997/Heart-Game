@@ -4,12 +4,12 @@ import { getFirestore, doc, setDoc, getDoc, collection, query, orderBy, limit, g
 
 const app = initializeApp({
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: "heart-game-5d25a.firebaseapp.com",
-  projectId: "heart-game-5d25a",
-  storageBucket: "heart-game-5d25a.firebasestorage.app",
-  messagingSenderId: "986794767256",
-  appId: "1:986794767256:web:a7fa3c7ff4968c5e4ff1ed",
-  measurementId: "G-4KYFRVKEJW"
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 });
 
 export const auth = getAuth(app);

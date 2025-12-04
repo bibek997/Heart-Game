@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./AuthContext";
 import Login from "./Login";
 import Register from "./Register";
-import Game from "./Game"; 
+import Game from "./components/Game"; 
 
 const Protected = ({ children }) => {
   const { user, loading } = useAuth();

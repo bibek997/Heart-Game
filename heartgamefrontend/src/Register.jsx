@@ -25,7 +25,7 @@ export default function Register() {
       <div className="hidden md:flex items-center justify-center bg-linear-to-br from-pink-50 to-indigo-100">
         <div className="text-center">
           <h1 className="text-5xl font-extrabold text-indigo-700">❤️ Heart Game</h1>
-          <p className="mt-2 text-gray-600">Create your account in seconds.</p>
+          <p className="mt-2 text-gray-600">Create a new account.</p>
         </div>
       </div>
 
